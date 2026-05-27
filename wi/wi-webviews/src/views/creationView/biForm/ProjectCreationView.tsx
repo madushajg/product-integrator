@@ -51,7 +51,6 @@ import {
     FormFooter,
 } from "../../shared/FormPageLayout";
 import {
-    ResolvedPathText,
     CloudErrorActionRow,
     ActionLink,
     Description,
@@ -407,12 +406,23 @@ export function ProjectCreationView({ onBack, ballerinaUnavailable }: { onBack?:
                                     id="project-folder-selector"
                                     label="Select Path"
                                     placeholder="Browse to select a folder..."
-                                    selectedPath={editablePath}
+                                    selectedPath={resolvedPath}
                                     required={true}
                                     onSelect={handlePathSelection}
                                     onChange={(value) => {
                                         setPathTouched(true);
-                                        setEditablePath(value);
+                                        const lastSep = Math.max(value.lastIndexOf('/'), value.lastIndexOf('\\'));
+                                        if (lastSep > 0) {
+                                            const parentDir = value.substring(0, lastSep);
+                                            const lastName = value.substring(lastSep + 1);
+                                            setEditablePath(parentDir);
+                                            if (lastName) {
+                                                handleTouched.current = true;
+                                                setProjectHandle(sanitizeProjectHandle(lastName, { trimTrailing: false }));
+                                            }
+                                        } else {
+                                            setEditablePath(value);
+                                        }
                                     }}
                                     onBlur={() => {
                                         if (pathTouched && editablePath !== formData.path) {
@@ -421,9 +431,6 @@ export function ProjectCreationView({ onBack, ballerinaUnavailable }: { onBack?:
                                     }}
                                     errorMsg={pathError || undefined}
                                 />
-                                {resolvedPath && resolvedPath !== editablePath && (
-                                    <ResolvedPathText>Will be created at: {resolvedPath}</ResolvedPathText>
-                                )}
                             </FieldGroup>
 
                             <CollapsibleSection

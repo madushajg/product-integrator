@@ -32,7 +32,7 @@ import {
 } from "./utils";
 import { DirectorySelector } from "../../../components/DirectorySelector/DirectorySelector";
 import { AdvancedConfigurationSection } from "./components";
-import { SectionDivider, ResolvedPathText } from "./styles";
+import { SectionDivider } from "./styles";
 import { ValidateProjectFormErrorField } from "@wso2/wi-core";
 import {
     PageBackdrop,
@@ -315,12 +315,23 @@ export function LibraryCreationView({ onBack, ballerinaUnavailable }: { onBack?:
                                     id="library-folder-selector"
                                     label="Select Path"
                                     placeholder="Browse to select a folder..."
-                                    selectedPath={editablePath}
+                                    selectedPath={resolvedPath}
                                     required={true}
                                     onSelect={handlePathSelection}
                                     onChange={(value) => {
                                         setPathTouched(true);
-                                        setEditablePath(value);
+                                        const lastSep = Math.max(value.lastIndexOf('/'), value.lastIndexOf('\\'));
+                                        if (lastSep > 0) {
+                                            const parentDir = value.substring(0, lastSep);
+                                            const lastName = value.substring(lastSep + 1);
+                                            setEditablePath(parentDir);
+                                            if (lastName) {
+                                                setPackageNameTouched(true);
+                                                setFormData(prev => ({ ...prev, packageName: lastName }));
+                                            }
+                                        } else {
+                                            setEditablePath(value);
+                                        }
                                     }}
                                     onBlur={() => {
                                         if (pathTouched && editablePath !== formData.path) {
@@ -329,9 +340,6 @@ export function LibraryCreationView({ onBack, ballerinaUnavailable }: { onBack?:
                                     }}
                                     errorMsg={pathError || undefined}
                                 />
-                                {resolvedPath && resolvedPath !== editablePath && (
-                                    <ResolvedPathText>Will be created at: {resolvedPath}</ResolvedPathText>
-                                )}
                             </FieldGroup>
 
                             <SectionDivider />

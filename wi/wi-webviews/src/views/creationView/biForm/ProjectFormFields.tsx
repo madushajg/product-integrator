@@ -25,7 +25,6 @@ import { useWorkspaceRoot } from "../../../providers";
 import {
     FieldGroup,
     SectionDivider,
-    ResolvedPathText,
 } from "./styles";
 import { AdvancedConfigurationSection } from "./components";
 import { Organization } from "./components/AdvancedConfigurationSection";
@@ -237,19 +236,29 @@ export function ProjectFormFields({
                     id="project-folder-selector"
                     label="Select Path"
                     placeholder="Browse to select a folder..."
-                    selectedPath={editablePath}
+                    selectedPath={resolvedPath}
                     required={true}
                     onSelect={handleProjectDirSelection}
                     onChange={(value) => {
                         setPathTouched(true);
-                        setEditablePath(value);
-                        onFormDataChange({ path: value });
+                        const lastSep = Math.max(value.lastIndexOf('/'), value.lastIndexOf('\\'));
+                        if (lastSep > 0) {
+                            const parentDir = value.substring(0, lastSep);
+                            const lastName = value.substring(lastSep + 1);
+                            setEditablePath(parentDir);
+                            const updates: Partial<ProjectFormData> = { path: parentDir };
+                            if (lastName) {
+                                updates.packageName = lastName;
+                                setPackageNameTouched(true);
+                            }
+                            onFormDataChange(updates);
+                        } else {
+                            setEditablePath(value);
+                            onFormDataChange({ path: value });
+                        }
                     }}
                     errorMsg={pathError || pathValidationError || undefined}
                 />
-                {resolvedPath && resolvedPath !== editablePath && (
-                    <ResolvedPathText>Will be created at: {resolvedPath}</ResolvedPathText>
-                )}
             </FieldGroup>
 
             <SectionDivider />
