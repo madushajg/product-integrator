@@ -121,10 +121,7 @@ export function BIProjectForm({ ballerinaUnavailable }: { ballerinaUnavailable?:
                 if (validationResult.errorField === ValidateProjectFormErrorField.PATH) {
                     setPathError(validationResult.errorMessage || "Invalid integration path");
                 } else if (validationResult.errorField === ValidateProjectFormErrorField.NAME) {
-                    setPackageNameValidationError(
-                        validationResult.errorMessage || "Invalid integration name"
-                    );
-                    setExpandAdvancedTrigger(t => t + 1);
+                    setPathError(validationResult.errorMessage || "Invalid integration name");
                 }
                 setIsValidating(false);
                 return;

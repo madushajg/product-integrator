@@ -323,8 +323,7 @@ export function ProjectCreationView({ onBack, ballerinaUnavailable }: { onBack?:
                 if (validationResult.errorField === ValidateProjectFormErrorField.PATH) {
                     setPathError(validationResult.errorMessage || "Invalid project path");
                 } else if (validationResult.errorField === ValidateProjectFormErrorField.NAME) {
-                    setProjectHandleError(validationResult.errorMessage || "Invalid project ID");
-                    setIsAdvancedExpanded(true);
+                    setPathError(validationResult.errorMessage || "Invalid project ID");
                 }
                 setIsValidating(false);
                 return;

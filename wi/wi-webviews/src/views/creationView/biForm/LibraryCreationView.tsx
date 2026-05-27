@@ -246,8 +246,7 @@ export function LibraryCreationView({ onBack, ballerinaUnavailable }: { onBack?:
                 if (validationResult.errorField === ValidateProjectFormErrorField.PATH) {
                     setPathError(validationResult.errorMessage || "Invalid library path");
                 } else if (validationResult.errorField === ValidateProjectFormErrorField.NAME) {
-                    setPackageNameError(validationResult.errorMessage || "Invalid package name");
-                    setIsPackageInfoExpanded(true);
+                    setPathError(validationResult.errorMessage || "Invalid package name");
                 }
                 setIsValidating(false);
                 return;

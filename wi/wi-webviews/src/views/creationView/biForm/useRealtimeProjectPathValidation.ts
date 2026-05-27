@@ -72,7 +72,10 @@ export function useRealtimeProjectPathValidation({
                     return;
                 }
 
-                if (!validationResult.isValid && validationResult.errorField === ValidateProjectFormErrorField.PATH) {
+                if (!validationResult.isValid && (
+                    validationResult.errorField === ValidateProjectFormErrorField.PATH ||
+                    validationResult.errorField === ValidateProjectFormErrorField.NAME
+                )) {
                     onPathErrorChange(validationResult.errorMessage || invalidPathMessage);
                     return;
                 }
