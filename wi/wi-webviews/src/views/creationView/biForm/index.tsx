@@ -16,7 +16,7 @@
  * under the License.
  */
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Button } from "@wso2/ui-toolkit";
 import { useVisualizerContext } from "../../../contexts";
 import {
@@ -24,14 +24,12 @@ import {
     ButtonWrapper
 } from "./styles";
 import { ProjectFormFields } from "./ProjectFormFields";
-import { DEFAULT_INTEGRATION_NAME, DEFAULT_PROJECT_NAME, ProjectFormData } from "./types";
+import { DEFAULT_INTEGRATION_NAME, ProjectFormData } from "./types";
 import {
     sanitizeOrgHandle,
     validateComponentName,
     validateOrgName,
     validatePackageName,
-    validateProjectHandle,
-    validateProjectName
 } from "./utils";
 import { ValidateProjectFormErrorField } from "@wso2/wi-core";
 import { useCloudContext } from "../../../providers";
@@ -47,7 +45,7 @@ export function BIProjectForm({ ballerinaUnavailable }: { ballerinaUnavailable?:
         createAsWorkspace: false,
         workspaceName: "",
         createWithinProject: false,
-        withinProjectName: DEFAULT_PROJECT_NAME,
+        withinProjectName: "",
         projectHandle: "",
         orgName: "",
         version: "",
@@ -57,39 +55,15 @@ export function BIProjectForm({ ballerinaUnavailable }: { ballerinaUnavailable?:
     const [integrationNameError, setIntegrationNameError] = useState<string | null>(null);
     const [pathError, setPathError] = useState<string | null>(null);
     const [packageNameValidationError, setPackageNameValidationError] = useState<string | null>(null);
-    const [projectNameError, setProjectNameError] = useState<string | null>(null);
-    const [projectHandleError, setProjectHandleError] = useState<string | null>(null);
-    const [cloudProjectNameError, setCloudProjectNameError] = useState<string | null>(null);
-    const [cloudProjectHandleError, setCloudProjectHandleError] = useState<string | null>(null);
     const [childHasErrors, setChildHasErrors] = useState(false);
     const [expandAdvancedTrigger, setExpandAdvancedTrigger] = useState(0);
     const createActionLabel = "Create Integration";
 
-    const resolvedOrg = useMemo(() => {
-        if (!organizations || organizations.length === 0) return undefined;
-        return formData.orgName
-            ? (organizations.find(o => o.handle === formData.orgName) ?? organizations[0])
-            : organizations[0];
-    }, [organizations, formData.orgName]);
-
     const handleFormDataChange = (data: Partial<ProjectFormData>) => {
         setFormData(prev => ({ ...prev, ...data }));
-        // Clear validation errors when form data changes
-        if (integrationNameError) {
-            setIntegrationNameError(null);
-        }
-        if (pathError) {
-            setPathError(null);
-        }
-        if (packageNameValidationError) {
-            setPackageNameValidationError(null);
-        }
-        if (projectNameError) {
-            setProjectNameError(null);
-        }
-        if (projectHandleError) {
-            setProjectHandleError(null);
-        }
+        if (integrationNameError) setIntegrationNameError(null);
+        if (pathError) setPathError(null);
+        if (packageNameValidationError) setPackageNameValidationError(null);
     };
 
     const handleCreateProject = async () => {
@@ -97,8 +71,6 @@ export function BIProjectForm({ ballerinaUnavailable }: { ballerinaUnavailable?:
         setIntegrationNameError(null);
         setPathError(null);
         setPackageNameValidationError(null);
-        setProjectNameError(null);
-        setProjectHandleError(null);
 
         let hasError = false;
 
@@ -121,34 +93,9 @@ export function BIProjectForm({ ballerinaUnavailable }: { ballerinaUnavailable?:
             }
         }
 
-        if (formData.createWithinProject) {
-            const projectNameErr = validateProjectName(formData.withinProjectName.trim());
-            if (projectNameErr) {
-                setProjectNameError(projectNameErr);
-                hasError = true;
-            }
-        }
-
-        if (formData.createWithinProject) {
-            const hErr = validateProjectHandle(formData.projectHandle);
-            if (hErr) {
-                setProjectHandleError(hErr);
-                setExpandAdvancedTrigger(t => t + 1);
-                hasError = true;
-            }
-        }
-
         const orgErr = validateOrgName(formData.orgName);
         if (orgErr) {
             setExpandAdvancedTrigger(t => t + 1);
-            hasError = true;
-        }
-
-        if (cloudProjectNameError) {
-            hasError = true;
-        }
-
-        if (cloudProjectHandleError) {
             hasError = true;
         }
 
@@ -163,30 +110,21 @@ export function BIProjectForm({ ballerinaUnavailable }: { ballerinaUnavailable?:
         }
 
         try {
-            const targetNameForValidation = formData.createWithinProject
-                ? formData.projectHandle
-                : formData.packageName;
-
             const validationResult = await wsClient.validateProjectPath({
                 projectPath: formData.path,
-                projectName: targetNameForValidation,
+                projectName: formData.packageName,
                 createDirectory: true,
-                createAsWorkspace: formData.createWithinProject,
+                createAsWorkspace: false,
             });
 
             if (!validationResult.isValid) {
                 if (validationResult.errorField === ValidateProjectFormErrorField.PATH) {
                     setPathError(validationResult.errorMessage || "Invalid integration path");
                 } else if (validationResult.errorField === ValidateProjectFormErrorField.NAME) {
-                    if (formData.createWithinProject) {
-                        setProjectHandleError(validationResult.errorMessage || "Invalid project ID");
-                        setExpandAdvancedTrigger(t => t + 1);
-                    } else {
-                        setPackageNameValidationError(
-                            validationResult.errorMessage || "Invalid integration name"
-                        );
-                        setExpandAdvancedTrigger(t => t + 1);
-                    }
+                    setPackageNameValidationError(
+                        validationResult.errorMessage || "Invalid integration name"
+                    );
+                    setExpandAdvancedTrigger(t => t + 1);
                 }
                 setIsValidating(false);
                 return;
@@ -200,12 +138,10 @@ export function BIProjectForm({ ballerinaUnavailable }: { ballerinaUnavailable?:
                 packageName: formData.packageName,
                 projectPath: formData.path,
                 createDirectory: true,
-                createAsWorkspace: formData.createWithinProject,
-                workspaceName: formData.createWithinProject ? formData.withinProjectName : undefined,
+                createAsWorkspace: false,
                 orgName: formData.orgName || undefined,
-                orgHandle: orgHandle,
+                orgHandle,
                 version: formData.version || undefined,
-                projectHandle: formData.createWithinProject ? formData.projectHandle : undefined,
             });
         } catch (error) {
             setPathError("An error occurred during validation");
@@ -221,15 +157,11 @@ export function BIProjectForm({ ballerinaUnavailable }: { ballerinaUnavailable?:
                 onFormDataChange={handleFormDataChange}
                 integrationNameError={integrationNameError || undefined}
                 pathError={pathError || undefined}
-                projectNameError={projectNameError || undefined}
                 packageNameValidationError={packageNameValidationError || undefined}
-                projectHandleError={projectHandleError || undefined}
                 expandAdvancedTrigger={expandAdvancedTrigger}
                 organizations={organizations}
-                onCloudProjectNameError={setCloudProjectNameError}
-                onCloudProjectHandleError={setCloudProjectHandleError}
                 onHasErrors={setChildHasErrors}
-                />
+            />
 
             <ButtonWrapper>
                 <span title={ballerinaUnavailable ? "Ballerina distribution is not set up. Use Configure to set it up." : undefined}>

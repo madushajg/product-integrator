@@ -16,13 +16,13 @@
  * under the License.
  */
 
-import { ActionButtons, Typography } from "@wso2/ui-toolkit";
+import { ActionButtons } from "@wso2/ui-toolkit";
 import { useEffect, useState } from "react";
 import { useVisualizerContext } from "../../contexts";
 import { ValidateProjectFormErrorField } from "@wso2/wi-core";
 import { BodyText } from "./styles";
 import { ProjectFormData, ProjectFormFields } from "../creationView/biForm/ProjectFormFields";
-import { validatePackageName, validateProjectName, validateProjectHandle, validateOrgName } from "../creationView/biForm/utils";
+import { validatePackageName, validateOrgName } from "../creationView/biForm/utils";
 import { MultiProjectFormData, MultiProjectFormFields } from "./components/MultiProjectFormFields";
 import { ButtonWrapper } from "./styles";
 import { ConfigureProjectFormProps } from "./types";
@@ -54,65 +54,36 @@ export function ConfigureProjectForm({ isMultiProject, onNext, onBack, selectedO
     const [folderNameError, setFolderNameError] = useState<string | null>(null);
     const [singleIntegrationNameError, setSingleIntegrationNameError] = useState<string | null>(null);
     const [singleIntegrationPathError, setSingleIntegrationPathError] = useState<string | null>(null);
-    const [projectNameError, setProjectNameError] = useState<string | null>(null);
     const [singleIntegrationPackageNameError, setSingleIntegrationPackageNameError] = useState<string | null>(null);
-    const [singleIntegrationProjectHandleError, setSingleIntegrationProjectHandleError] = useState<string | null>(null);
     const [orgNameError, setOrgNameError] = useState<string | null>(null);
-    const [singleIntegrationCloudProjectNameError, setSingleIntegrationCloudProjectNameError] = useState<string | null>(null);
-    const [singleIntegrationCloudProjectHandleError, setSingleIntegrationCloudProjectHandleError] = useState<string | null>(null);
     const selectedResourceTypeLabel = singleIntegrationData.isLibrary ? "Library" : "Integration";
 
     useEffect(() => {
-        if (!selectedOrgName) {
-            return;
-        }
+        if (!selectedOrgName) return;
         setSingleIntegrationData((prev) => ({ ...prev, orgName: selectedOrgName }));
     }, [selectedOrgName]);
 
     const handleSingleProjectFormChange = (data: Partial<ProjectFormData>) => {
         setSingleIntegrationData(prev => ({ ...prev, ...data }));
-        // Clear validation errors when form data changes
-        if (singleIntegrationNameError) {
-            setSingleIntegrationNameError(null);
-        }
-        if (orgNameError && data.orgName !== undefined) {
-            setOrgNameError(null);
-        }
-        if (singleIntegrationPathError) {
-            setSingleIntegrationPathError(null);
-        }
-        if (projectNameError) {
-            setProjectNameError(null);
-        }
-        if (singleIntegrationPackageNameError) {
-            setSingleIntegrationPackageNameError(null);
-        }
-        if (singleIntegrationProjectHandleError) {
-            setSingleIntegrationProjectHandleError(null);
-        }
+        if (singleIntegrationNameError) setSingleIntegrationNameError(null);
+        if (orgNameError && data.orgName !== undefined) setOrgNameError(null);
+        if (singleIntegrationPathError) setSingleIntegrationPathError(null);
+        if (singleIntegrationPackageNameError) setSingleIntegrationPackageNameError(null);
     };
 
     const handleMultiProjectFormChange = (data: Partial<MultiProjectFormData>) => {
         setMultiProjectData(prev => ({ ...prev, ...data }));
-        // Clear validation errors when form data changes
-        if (pathError) {
-            setPathError(null);
-        }
-        if (folderNameError) {
-            setFolderNameError(null);
-        }
+        if (pathError) setPathError(null);
+        if (folderNameError) setFolderNameError(null);
     };
 
     const handleCreateSingleProject = async () => {
         setIsValidating(true);
         setSingleIntegrationNameError(null);
         setSingleIntegrationPathError(null);
-        setProjectNameError(null);
         setSingleIntegrationPackageNameError(null);
-        setSingleIntegrationProjectHandleError(null);
         setOrgNameError(null);
 
-        // Validate required fields first
         let hasError = false;
 
         if (singleIntegrationData.integrationName.trim().length < 2) {
@@ -131,35 +102,9 @@ export function ConfigureProjectForm({ isMultiProject, onNext, onBack, selectedO
             }
         }
 
-        if (singleIntegrationData.createWithinProject) {
-            const projectNameErr = validateProjectName(singleIntegrationData.withinProjectName.trim());
-            if (projectNameErr) {
-                setProjectNameError(projectNameErr);
-                hasError = true;
-            }
-        }
-
-        if (singleIntegrationData.createWithinProject) {
-            const handleErr = validateProjectHandle(singleIntegrationData.projectHandle);
-            if (handleErr) {
-                setSingleIntegrationProjectHandleError(handleErr);
-                hasError = true;
-            }
-        }
-
         const orgErr = validateOrgName(singleIntegrationData.orgName);
         if (orgErr) {
             setOrgNameError(orgErr);
-            hasError = true;
-        } else {
-            setOrgNameError(null);
-        }
-
-        if (singleIntegrationCloudProjectNameError) {
-            hasError = true;
-        }
-
-        if (singleIntegrationCloudProjectHandleError) {
             hasError = true;
         }
 
@@ -174,53 +119,36 @@ export function ConfigureProjectForm({ isMultiProject, onNext, onBack, selectedO
         }
 
         try {
-            // Validate the project path
-            const targetNameForValidation = singleIntegrationData.createWithinProject
-                ? singleIntegrationData.projectHandle
-                : singleIntegrationData.packageName;
-
             const validationResult = await wsClient.validateProjectPath({
                 projectPath: singleIntegrationData.path,
-                projectName: targetNameForValidation,
+                projectName: singleIntegrationData.packageName,
                 createDirectory: true,
-                createAsWorkspace: singleIntegrationData.createWithinProject,
+                createAsWorkspace: false,
             });
 
             if (!validationResult.isValid) {
-                // Show error on the appropriate field
                 if (validationResult.errorField === ValidateProjectFormErrorField.PATH) {
                     setSingleIntegrationPathError(
                         validationResult.errorMessage || `Invalid ${selectedResourceTypeLabel.toLowerCase()} path`
                     );
                 } else if (validationResult.errorField === ValidateProjectFormErrorField.NAME) {
-                    if (singleIntegrationData.createWithinProject) {
-                        setProjectNameError(validationResult.errorMessage || "Invalid project name");
-                    } else {
-                        setSingleIntegrationPackageNameError(
-                            validationResult.errorMessage || `Invalid ${selectedResourceTypeLabel.toLowerCase()} name`
-                        );
-                    }
+                    setSingleIntegrationPackageNameError(
+                        validationResult.errorMessage || `Invalid ${selectedResourceTypeLabel.toLowerCase()} name`
+                    );
                 }
                 setIsValidating(false);
                 return;
             }
 
-            // If validation passes, proceed
             const payload = {
                 projectName: singleIntegrationData.integrationName,
                 packageName: singleIntegrationData.packageName,
                 projectPath: singleIntegrationData.path,
                 createDirectory: true,
-                createAsWorkspace: singleIntegrationData.createWithinProject,
-                workspaceName: singleIntegrationData.createWithinProject
-                    ? singleIntegrationData.withinProjectName
-                    : undefined,
+                createAsWorkspace: false,
                 orgName: singleIntegrationData.orgName || undefined,
                 version: singleIntegrationData.version || undefined,
                 isLibrary: singleIntegrationData.isLibrary,
-                projectHandle: singleIntegrationData.createWithinProject
-                    ? singleIntegrationData.projectHandle
-                    : undefined,
             };
             await onNext(payload, false);
         } catch (error) {
@@ -235,7 +163,6 @@ export function ConfigureProjectForm({ isMultiProject, onNext, onBack, selectedO
         setPathError(null);
         setFolderNameError(null);
 
-        // Validate required fields first
         let hasError = false;
 
         if (!multiProjectData.path.trim() || multiProjectData.path.length < 2) {
@@ -254,7 +181,6 @@ export function ConfigureProjectForm({ isMultiProject, onNext, onBack, selectedO
         }
 
         try {
-            // Validate the project path
             const validationResult = await wsClient.validateProjectPath({
                 projectPath: multiProjectData.path,
                 projectName: multiProjectData.rootFolderName,
@@ -262,7 +188,6 @@ export function ConfigureProjectForm({ isMultiProject, onNext, onBack, selectedO
             });
 
             if (!validationResult.isValid) {
-                // Show error on the appropriate field
                 if (validationResult.errorField === ValidateProjectFormErrorField.PATH) {
                     setPathError(validationResult.errorMessage || "Invalid project path");
                 } else if (validationResult.errorField === ValidateProjectFormErrorField.NAME) {
@@ -272,7 +197,6 @@ export function ConfigureProjectForm({ isMultiProject, onNext, onBack, selectedO
                 return;
             }
 
-            // If validation passes, proceed
             await onNext({
                 projectName: multiProjectData.rootFolderName,
                 packageName: multiProjectData.rootFolderName,
@@ -327,11 +251,7 @@ export function ConfigureProjectForm({ isMultiProject, onNext, onBack, selectedO
                         integrationNameError={singleIntegrationNameError || undefined}
                         pathError={singleIntegrationPathError || undefined}
                         packageNameValidationError={singleIntegrationPackageNameError || undefined}
-                        projectNameError={projectNameError || undefined}
-                        projectHandleError={singleIntegrationProjectHandleError || undefined}
                         orgNameError={orgNameError ?? undefined}
-                        onCloudProjectNameError={setSingleIntegrationCloudProjectNameError}
-                        onCloudProjectHandleError={setSingleIntegrationCloudProjectHandleError}
                     />
 
                     <ButtonWrapper>
